@@ -6,9 +6,6 @@ import discord
 from discord.ext import commands
 from secret import *
 
-
-
-
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -26,25 +23,22 @@ async def on_ready():
 
 @bot.command()
 async def create(ctx, arg):
-    doc_ref = db.collection("users").document(arg)
-    doc_ref.set({
-        'name': arg,
-        'dkp': 0
-    })
-    await ctx.send(f'User {arg} created. with 0 dkp')
-
-
-@bot.command()
-async def add(ctx, arg1, arg2):
-    doc_ref = db.collection("users").document(arg1)
-    doc = doc_ref.get()
-    if doc.exists:
-        doc_ref.update({
-            'dkp': doc.to_dict()['dkp'] + int(arg2)
-        })
-        await ctx.send(f'{arg2} dkp added to {arg1}')
+    role = "developer"
+    if role in [y.name.lower() for y in ctx.author.roles]:
+        doc_ref = db.collection("users").document(arg)
+        doc = doc_ref.get()
+        if not doc.exists:
+            doc_ref.set({
+                'name': arg,
+                'dkp': 0
+            })
+            await ctx.send(f'User {arg} created. with 0 dkp')
+        else:
+            await ctx.send(f'User {arg} already exists')
     else:
-        await ctx.send(f'User {arg1} not found')
+        await ctx.send('you are not allowed to do that only developers can do that')
+
+
 
 
 @bot.command()
@@ -81,18 +75,27 @@ async def list(ctx):
 
 
 @bot.command()
-async def addall(ctx, amount, *args):
+async def add(ctx, amount, *args):
     users_ref = db.collection("users")
     docs = users_ref.stream()
-    msg = ''
+    msg = f'{amount} dkp added!'
+    users = list(args)
+
     for doc in docs:
         if doc.to_dict()['name'] in args:
             doc.reference.update({
                 'dkp': doc.to_dict()['dkp'] + int(amount)
             })
-            msg += f'{amount} dkp added to {doc.to_dict()["name"]}\n'
-        
-    await ctx.send(msg)
+            users.remove(doc.to_dict()['name'])
+
+    if len(users) > 0:
+        error_message = 'except the following users:\n'
+        for user in users:
+            error_message += f'user {user} not found\n'
+        await ctx.send(msg)
+        await ctx.send(error_message)
+    else:        
+        await ctx.send(msg)
 
 bot.remove_command('help')
 
@@ -106,7 +109,7 @@ async def help(ctx):
     embed.add_field(name="Server count", value=f"{len(bot.guilds)}")
 
     # explain the commands
-    embed.add_field(name="!create <name>",
+    embed.add_field(name="!create <name> (admin only)",
                     value="create a new user with 0 dkp")
     embed.add_field(name="!add <name> <amount>", value="add dkp to a user")
     embed.add_field(name="!remove <name> <amount>",
@@ -131,8 +134,9 @@ async def help(ctx):
 
 @bot.command()
 async def addboss(ctx, arg1, arg2):
+    role = "developer"
     arg1 = arg1.lower()
-    if ctx.message.author.name == '_ali2199':
+    if role in [y.name.lower() for y in ctx.author.roles]:
         doc_ref = db.collection("bosses").document(arg1)
         doc = doc_ref.get()
         if not doc.exists:
@@ -144,13 +148,14 @@ async def addboss(ctx, arg1, arg2):
         else:
             await ctx.send(f'boss {arg1} already exists')
     else:
-        await ctx.send('you are not allowed to do that')
+        await ctx.send('you are not allowed to do that, only developers can do that')
 
 
 @bot.command()
 async def removeboss(ctx, arg1):
+    role = "developer"
     arg1 = arg1.lower()
-    if ctx.message.author.name == '_ali2199':
+    if role in [y.name.lower() for y in ctx.author.roles]:
         doc_ref = db.collection("bosses").document(arg1)
         doc = doc_ref.get()
         if doc.exists:
@@ -159,7 +164,7 @@ async def removeboss(ctx, arg1):
         else:
             await ctx.send(f'boss {arg1} not found')
     else:
-        await ctx.send('you are not allowed to do that')
+        await ctx.send('you are not allowed to do that, only developers can do that')
 
 
 @bot.command()
@@ -184,22 +189,34 @@ async def listbosses(ctx):
 
 
 @bot.command()
-async def addbossdkp(ctx, arg1, arg2):
+async def addboss(ctx, arg1, *args):
     arg1 = arg1.lower()
     doc_ref = db.collection("bosses").document(arg1)
-    doc = doc_ref.get()
+    boss_doc = doc_ref.get()
     if doc.exists:
-        doc_ref2 = db.collection("users").document(arg2)
-        doc2 = doc_ref2.get()
-        if doc2.exists:
-            doc_ref2.update({
-                'dkp': doc2.to_dict()['dkp'] + doc.to_dict()['dkp']
-            })
-            await ctx.send(f'{doc.to_dict()["dkp"]} dkp added to {arg2}')
+        users_ref = db.collection("users")
+        docs = users_ref.stream()
+        msg = f'{arg1} dkp added!'
+        users = list(args)
+
+        for doc in docs:
+            if doc.to_dict()['name'] in args:
+                doc.reference.update({
+                    'dkp': doc.to_dict()['dkp'] + int(boss_doc.to_dict()['dkp'])
+                })
+                users.remove(doc.to_dict()['name'])
+
+        if len(users) > 0:
+            error_message = 'except the following users:\n'
+            for user in users:
+                error_message += f'user {user} not found\n'
+            await ctx.send(msg)
+            await ctx.send(error_message)
         else:
-            await ctx.send(f'User {arg2} not found')
-    else:
-        await ctx.send(f'boss {arg1} not found')
+            await ctx.send(msg)
+
+
+
 
             
 bot.run(bot_token)
