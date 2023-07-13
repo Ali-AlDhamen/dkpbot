@@ -109,23 +109,22 @@ async def help(ctx):
     embed.add_field(name="Server count", value=f"{len(bot.guilds)}")
 
     # explain the commands
-    embed.add_field(name="!create <name> (admin only)",
-                    value="create a new user with 0 dkp")
-    embed.add_field(name="!add <name> <amount>", value="add dkp to a user")
+    embed.add_field(name="!create <name>",
+                    value="create a new user with 0 dkp (admin only)")
     embed.add_field(name="!remove <name> <amount>",
                     value="remove dkp from a user")
     embed.add_field(name="!dkp <name>", value="show dkp of a user")
     embed.add_field(name="!list", value="list all users and their dkp")
-    embed.add_field(name="!addall <amount> <name1> <name2> ...",
+    embed.add_field(name="!add <amount> <name1> <name2> ...",
                     value="add dkp to multiple users")
     embed.add_field(name="!addboss <name> <amount>",
                     value="create a new boss with dkp (admin only)")
     embed.add_field(name="!removeboss <name>",
-                    value="remove a boss")
+                    value="remove a boss (admin only)")
     embed.add_field(name="!boss <name>", value="show dkp of a boss")
     embed.add_field(name="!listbosses", value="list all bosses and their dkp")
-    embed.add_field(name="!addbossdkp <bossname> <name>",
-                    value="add boss dkp to a user")
+    embed.add_field(name="!addboss <bossname> <name1> <name2> ...",
+                    value="add boss dkp to multiple users")
 
     embed.add_field(name="!help", value="show this message")
 
@@ -182,6 +181,8 @@ async def boss(ctx, arg):
 async def listbosses(ctx):
     users_ref = db.collection("bosses")
     docs = users_ref.stream()
+    if len(docs) == 0:
+        await ctx.send('no bosses found')
     msg = ''
     for doc in docs:
         msg += f'{doc.to_dict()["name"]} has {doc.to_dict()["dkp"]} dkp\n'
